@@ -1,4 +1,4 @@
-package InputOutput;
+package view;
 
 import javax.swing.*;
 

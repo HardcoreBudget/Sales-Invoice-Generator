@@ -1,17 +1,17 @@
-package InputOutput;
+package view;
 
 import javax.swing.*;
 
 public class CreateInvoice extends  JFrame{
     public JPanel mainFrame;
-    public JTextField InvoiceNumber;
-    public JTextField CustomerName;
-    public JTextField Date;
+    public JTextField invoiceNumber;
+    public JTextField customerName;
+    public JTextField date;
     public JButton okButton;
     public JButton cancelButton;
-    public JTextField ProductName;
-    public JTextField Price;
-    public JTextField Quantity;
+    public JTextField itemName;
+    public JTextField price;
+    public JTextField count;
 
     public CreateInvoice()
     {
