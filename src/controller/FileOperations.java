@@ -1,5 +1,7 @@
-package model;
+package controller;
 
+import model.InvoiceHeader;
+import model.InvoiceLine;
 import view.CreateInvoice;
 import view.SIG;
 
@@ -7,10 +9,10 @@ import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
+import java.io.Console;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -95,21 +97,44 @@ public class FileOperations extends JFrame implements ActionListener {
             if (invoiceHeaders == null) {
                 invoiceHeaders = new ArrayList<>();
             }
-            invoiceHeaders.add(new InvoiceHeader(createInvoice.invoiceNumber.getText().toString(),
-                    createInvoice.date.getText().toString(), createInvoice.customerName.getText().toString()));
-            List<InvoiceLine> newInvoiceLines = new ArrayList<>();
-            String[] productNames = createInvoice.itemName.getText().toString().split(",");
-            String[] prices = createInvoice.price.getText().toString().split(",");
-            String[] quantities = createInvoice.count.getText().toString().split(",");
+            boolean duplicateInvoiceNumber=false;
+            for(InvoiceHeader invoiceHeader: invoiceHeaders) {
+                if(invoiceHeader.invoiceNumber.equals(createInvoice.invoiceNumber.getText().toString())){
+                    duplicateInvoiceNumber=true;
+                }
+            }
+            if(!duplicateInvoiceNumber) {
+                invoiceHeaders.add(new InvoiceHeader(createInvoice.invoiceNumber.getText().toString(),
+                        createInvoice.date.getText().toString(), createInvoice.customerName.getText().toString()));
+                List<InvoiceLine> newInvoiceLines = new ArrayList<>();
+                String[] productNames = createInvoice.itemName.getText().toString().split(",");
+                String[] prices = createInvoice.price.getText().toString().split(",");
+                String[] quantities = createInvoice.count.getText().toString().split(",");
+                if (productNames.length == prices.length && productNames.length == quantities.length) {
+                    for (int i = 0; i < productNames.length; i++) {
+                        newInvoiceLines.add(new InvoiceLine(createInvoice.invoiceNumber.getText().toString(), productNames[i],
+                                Double.parseDouble(prices[i]), Integer.parseInt(quantities[i])));
+                    }
 
-            for (int i = 0; i < productNames.length; i++) {
-                newInvoiceLines.add(new InvoiceLine(createInvoice.invoiceNumber.getText().toString(), productNames[i],
-                        Double.parseDouble(prices[i]), Integer.parseInt(quantities[i])));
+                    invoiceHeaders.get(invoiceHeaders.size() - 1).setFileLines(newInvoiceLines);
+                    loadHeaderContent(null);
+                    createInvoice.setVisible(false);
+                    char[] date = createInvoice.date.getText().toString().toCharArray();
+                    if (date[2] != '-' || date[5] != '-') {
+                        JOptionPane.showMessageDialog(this, "Date format for invoice number " +
+                                createInvoice.invoiceNumber.getText().toString() + " is wrong", "Error", JOptionPane.WARNING_MESSAGE);
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(this, "Number of products, prices, and count don't match", "Error",
+                            JOptionPane.WARNING_MESSAGE);
+                    invoiceHeaders.remove(invoiceHeaders.size() - 1);
+                }
+            }
+            else{
+                JOptionPane.showMessageDialog(this,"Duplicate invoice number","Error",
+                        JOptionPane.WARNING_MESSAGE);
             }
 
-            invoiceHeaders.get(invoiceHeaders.size() - 1).setFileLines(newInvoiceLines);
-            loadHeaderContent(null);
-            createInvoice.setVisible(false);
         }
         if (e.getActionCommand().equals("Delete")) {
             if (invoiceHeaders != null && panel.table1.getSelectedRow() != -1) {
@@ -130,7 +155,7 @@ public class FileOperations extends JFrame implements ActionListener {
             if (!panel.table2.isEditing() && invoiceHeaders != null) {
                 List<InvoiceLine> invoiceLines = invoiceHeaders.get(selectedRow).getFileLines();
                 invoiceHeaders.set(selectedRow, new InvoiceHeader(panel.invoiceNumberTF.getText().toString(),
-                        panel.customerNameTF.getText().toString(), panel.dateTF.getText().toString()));
+                        panel.dateTF.getText().toString(), panel.customerNameTF.getText().toString()));
 
                 for (int i = 0; i < invoiceLines.size(); i++) {
                     if (panel.invoiceNumberTF.getText().toString().equals(panel.table2.getValueAt(i, 0).toString())) {
@@ -208,7 +233,7 @@ public class FileOperations extends JFrame implements ActionListener {
 
             for (int i = 0; i < contents.size(); i++) {
                 char[] date = headerData[i][1].toCharArray();
-                if(date[2] != '-' && date[5] !='-') {
+                if(date[2] != '-' || date[5] !='-') {
                     JOptionPane.showMessageDialog(this, "Date format for invoice number " +
                             headerData[i][0] + " is wrong", "Error", JOptionPane.WARNING_MESSAGE);
                 }
