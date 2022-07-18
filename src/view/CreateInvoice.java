@@ -9,9 +9,6 @@ public class CreateInvoice extends  JFrame{
     public JTextField date;
     public JButton okButton;
     public JButton cancelButton;
-    public JTextField itemName;
-    public JTextField price;
-    public JTextField count;
 
     public CreateInvoice()
     {

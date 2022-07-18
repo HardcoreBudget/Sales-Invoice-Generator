@@ -25,7 +25,7 @@ public class InvoiceHeader {
 
     public String[] getHeaderInfo()
     {
-        return new String[] {invoiceNumber, customerName,date,Double.toString(getTotalCost())};
+        return new String[] {invoiceNumber, date,customerName,Double.toString(getTotalCost())};
     }
 
 

@@ -14,6 +14,8 @@ public class SIG {
     public JButton createNewInvoiceButton;
     public JButton deleteInvoiceButton;
     public JTextField invoiceTotalTF;
+    public JButton newLineButton;
+    public JButton deleteLineButton;
 
     public SIG()
     {
@@ -21,6 +23,8 @@ public class SIG {
         createNewInvoiceButton.setActionCommand("Create");
         deleteInvoiceButton.setActionCommand("Delete");
         cancelButton.setActionCommand("Cancel Changes");
+        newLineButton.setActionCommand("New Line");
+        deleteLineButton.setActionCommand("Delete Line");
         table1.setDefaultEditor(Object.class,null);
     }
 }

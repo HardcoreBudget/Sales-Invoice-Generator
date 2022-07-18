@@ -3,6 +3,7 @@ package controller;
 import model.InvoiceHeader;
 import model.InvoiceLine;
 import view.CreateInvoice;
+import view.NewLine;
 import view.SIG;
 
 import javax.swing.*;
@@ -12,7 +13,6 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
-import java.io.Console;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -27,9 +27,11 @@ public class FileOperations extends JFrame implements ActionListener {
     JMenuBar menuBar;
     JFileChooser fileChooser;
     public List<InvoiceHeader> invoiceHeaders;
+    List<InvoiceLine> tempInvoiceLines;
     CreateInvoice createInvoice;
+    NewLine newLine;
     SIG panel;
-    int selectedRow;
+    int selectedRow=-1;
     public String[][] headerData;
     String[][] lineData;
     public boolean fileChooserConfirmed;
@@ -41,10 +43,16 @@ public class FileOperations extends JFrame implements ActionListener {
         panel.deleteInvoiceButton.addActionListener(this);
         panel.saveButton.addActionListener(this);
         panel.cancelButton.addActionListener(this);
+        panel.newLineButton.addActionListener(this);
+        panel.deleteLineButton.addActionListener(this);
 
         createInvoice = new CreateInvoice();
         createInvoice.cancelButton.addActionListener(this);
         createInvoice.okButton.addActionListener(this);
+
+        newLine = new NewLine();
+        newLine.cancelButton.addActionListener(this);
+        newLine.okButton.addActionListener(this);
 
         setContentPane(panel.mainFrame);
         setSize(1000, 500);
@@ -85,9 +93,6 @@ public class FileOperations extends JFrame implements ActionListener {
             createInvoice.invoiceNumber.setText("");
             createInvoice.date.setText("");
             createInvoice.customerName.setText("");
-            createInvoice.itemName.setText("");
-            createInvoice.price.setText("");
-            createInvoice.count.setText("");
             createInvoice.setVisible(true);
         }
         if (e.getActionCommand().equals("Cancel Invoice")) {
@@ -106,34 +111,19 @@ public class FileOperations extends JFrame implements ActionListener {
             if(!duplicateInvoiceNumber) {
                 invoiceHeaders.add(new InvoiceHeader(createInvoice.invoiceNumber.getText().toString(),
                         createInvoice.date.getText().toString(), createInvoice.customerName.getText().toString()));
-                List<InvoiceLine> newInvoiceLines = new ArrayList<>();
-                String[] productNames = createInvoice.itemName.getText().toString().split(",");
-                String[] prices = createInvoice.price.getText().toString().split(",");
-                String[] quantities = createInvoice.count.getText().toString().split(",");
-                if (productNames.length == prices.length && productNames.length == quantities.length) {
-                    for (int i = 0; i < productNames.length; i++) {
-                        newInvoiceLines.add(new InvoiceLine(createInvoice.invoiceNumber.getText().toString(), productNames[i],
-                                Double.parseDouble(prices[i]), Integer.parseInt(quantities[i])));
-                    }
-
-                    invoiceHeaders.get(invoiceHeaders.size() - 1).setFileLines(newInvoiceLines);
-                    loadHeaderContent(null);
-                    createInvoice.setVisible(false);
-                    char[] date = createInvoice.date.getText().toString().toCharArray();
-                    if (date[2] != '-' || date[5] != '-') {
-                        JOptionPane.showMessageDialog(this, "Date format for invoice number " +
-                                createInvoice.invoiceNumber.getText().toString() + " is wrong", "Error", JOptionPane.WARNING_MESSAGE);
-                    }
-                } else {
-                    JOptionPane.showMessageDialog(this, "Number of products, prices, and count don't match", "Error",
-                            JOptionPane.WARNING_MESSAGE);
-                    invoiceHeaders.remove(invoiceHeaders.size() - 1);
+                loadHeaderContent(null);
+                createInvoice.setVisible(false);
+                char[] date = createInvoice.date.getText().toString().toCharArray();
+                if (date[2] != '-' || date[5] != '-') {
+                    JOptionPane.showMessageDialog(this, "Date format for invoice number " +
+                            createInvoice.invoiceNumber.getText().toString() + " is wrong", "Error", JOptionPane.WARNING_MESSAGE);
                 }
             }
             else{
                 JOptionPane.showMessageDialog(this,"Duplicate invoice number","Error",
                         JOptionPane.WARNING_MESSAGE);
             }
+
 
         }
         if (e.getActionCommand().equals("Delete")) {
@@ -152,8 +142,12 @@ public class FileOperations extends JFrame implements ActionListener {
             }
         }
         if (e.getActionCommand().equals("Save Line")) {
-            if (!panel.table2.isEditing() && invoiceHeaders != null) {
-                List<InvoiceLine> invoiceLines = invoiceHeaders.get(selectedRow).getFileLines();
+            if (!panel.table2.isEditing() && invoiceHeaders != null && selectedRow!=-1) {
+                List<InvoiceLine> invoiceLines = new ArrayList<>(invoiceHeaders.get(selectedRow).getFileLines());
+                if(tempInvoiceLines!=null){
+                    invoiceLines=new ArrayList<>(tempInvoiceLines);
+                    tempInvoiceLines=null;
+                }
                 invoiceHeaders.set(selectedRow, new InvoiceHeader(panel.invoiceNumberTF.getText().toString(),
                         panel.dateTF.getText().toString(), panel.customerNameTF.getText().toString()));
 
@@ -171,7 +165,7 @@ public class FileOperations extends JFrame implements ActionListener {
                                         , panel.table2.getValueAt(i, 1).toString()
                                         , Double.parseDouble(panel.table2.getValueAt(i, 2).toString())
                                         , Integer.parseInt(panel.table2.getValueAt(i, 3).toString())));
-                                List<InvoiceLine> additionalLine = invoiceHeaders.get(j).getFileLines();
+                                List<InvoiceLine> additionalLine = new ArrayList<>(invoiceHeaders.get(j).getFileLines());
                                 boolean match = false;
                                 for (int z = 0; z < additionalLine.size(); z++) {
                                     if (additionalLine.get(z).itemName.equals(invoiceLines.get(i).itemName)
@@ -190,7 +184,6 @@ public class FileOperations extends JFrame implements ActionListener {
                     }
                 }
                 invoiceHeaders.get(selectedRow).setFileLines(invoiceLines);
-                //headers.get(panel.table1.getSelectedRow()).setFileLines();
                 loadHeaderContent(null);
                 viewLineTable();
             }
@@ -217,7 +210,52 @@ public class FileOperations extends JFrame implements ActionListener {
                 writeFile("Choose Line Save Location", lineData);
             }
         }
+        if (e.getActionCommand().equals("New Line")){
+            if(invoiceHeaders!=null && selectedRow!=-1) {
+                newLine.itemName.setText("");
+                newLine.price.setText("");
+                newLine.count.setText("");
+                newLine.setVisible(true);
+            }
+        }
+        if (e.getActionCommand().equals("Cancel Line")){
+            newLine.setVisible(false);
+        }
+        if (e.getActionCommand().equals("Add Line")) {
+            String[] productNames = newLine.itemName.getText().toString().split(",");
+            String[] prices = newLine.price.getText().toString().split(",");
+            String[] quantities = newLine.count.getText().toString().split(",");
+            if (productNames.length == prices.length && productNames.length == quantities.length) {
+                for (int i = 0; i < productNames.length; i++) {
+                    boolean match = false;
+                    for (int z = 0; z < tempInvoiceLines.size(); z++) {
+                        if (tempInvoiceLines.get(z).itemName.equals(productNames[i])
+                                && tempInvoiceLines.get(z).price == Double.parseDouble(prices[i])) {
+                            tempInvoiceLines.get(z).count += Integer.parseInt(quantities[i]);
+                            match = true;
+                        }
+                    }
+                    if (!match) {
+                        tempInvoiceLines.add(new InvoiceLine(invoiceHeaders.get(selectedRow).invoiceNumber, productNames[i],
+                                Double.parseDouble(prices[i]), Integer.parseInt(quantities[i])));
+                    }
 
+                }
+                newLine.setVisible(false);
+                viewUnsavedLineTable();
+            }
+            else {
+                JOptionPane.showMessageDialog(this, "Number of products, prices, and count don't match", "Error",
+                        JOptionPane.WARNING_MESSAGE);
+            }
+
+        }
+        if (e.getActionCommand().equals("Delete Line")){
+            if(panel.table2.getSelectedRow()!=-1){
+                tempInvoiceLines.remove(panel.table2.getSelectedRow());
+                viewUnsavedLineTable();
+            }
+        }
     }
 
     public void loadHeaderContent(List<String> contents) {
@@ -273,6 +311,7 @@ public class FileOperations extends JFrame implements ActionListener {
             panel.dateTF.setText(invoiceHeaders.get(selectedRow).date);
             panel.customerNameTF.setText(invoiceHeaders.get(selectedRow).customerName);
             panel.invoiceTotalTF.setText(Double.toString(invoiceHeaders.get(selectedRow).getTotalCost()));
+            tempInvoiceLines=new ArrayList<>(invoiceHeaders.get(selectedRow).getFileLines());
         } catch (Exception e) {}
     }
 
@@ -393,6 +432,24 @@ public class FileOperations extends JFrame implements ActionListener {
                     JOptionPane.WARNING_MESSAGE);
 
         }
+    }
+
+    void viewUnsavedLineTable(){
+        try {
+            String[][] data = new String[tempInvoiceLines.size()][4];
+            for (int i = 0; i < tempInvoiceLines.size(); i++) {
+                data[i] = tempInvoiceLines.get(i).getLineInfo();
+            }
+            String[] cols = {"Invoice Number", "Item Name", "Item Price", "Count", "Item Total"};
+
+            panel.table2.setModel(new DefaultTableModel(data, cols));
+
+            double totalCost = 0;
+            for (InvoiceLine invoiceLine : tempInvoiceLines) {
+                totalCost += invoiceLine.getLineCost();
+            }
+            panel.invoiceTotalTF.setText(Double.toString(totalCost));
+        } catch (Exception ex) {}
     }
 
     public static void main(String[] s) {
